@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -165,6 +167,8 @@ fun MainIdeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
+                    .consumeWindowInsets(innerPadding)
+                    .imePadding()
             ) {
                 if (!isCompactWidth) {
                     NavigationRail(
@@ -227,7 +231,8 @@ fun MainIdeScreen(
                                 viewModel.selectTab(IdeTab.TERMINAL)
                                 viewModel.runTerminalCommand(cmd)
                             },
-                            onNavigateToTab = viewModel::selectTab
+                            onNavigateToTab = viewModel::selectTab,
+                            onOpenSettings = { showSettings = true }
                         )
 
                         IdeTab.FILES -> FileExplorerView(

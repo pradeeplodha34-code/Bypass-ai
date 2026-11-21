@@ -14,26 +14,38 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.bypass.ide.model.IdeSettings
 import com.bypass.ide.model.NetworkShieldStatus
@@ -59,6 +71,8 @@ fun SettingsDialog(
     onResetSocketPool: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    var showApiKey by remember { mutableStateOf(false) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = ObsidianSurface,
@@ -164,6 +178,121 @@ fun SettingsDialog(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text("Reset Pool")
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = ObsidianBorder)
+
+                // Optional Direct Gemini API Key (Dual-Mode Support)
+                val hasCustomKey = settings.customGeminiApiKey.isNotBlank()
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = ObsidianSurfaceElevated,
+                    border = BorderStroke(
+                        1.dp,
+                        if (hasCustomKey) CyanElectric.copy(alpha = 0.5f) else ObsidianBorder
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Key,
+                                contentDescription = "AI Engine Configuration",
+                                tint = if (hasCustomKey) CyanElectric else EmeraldMatrix,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = if (hasCustomKey) {
+                                    "Engine: Direct Gemini API Key"
+                                } else {
+                                    "Engine: Built-in Firebase AI (Keyless)"
+                                },
+                                style = MaterialTheme.typography.titleSmall,
+                                color = TextPrimary
+                            )
+                        }
+
+                        Text(
+                            text = "Built-in Firebase AI works automatically without a key. If running a standalone GitHub Actions debug APK on a personal phone, you can optionally paste your own Gemini API key below (stored only on this device).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+
+                        OutlinedTextField(
+                            value = settings.customGeminiApiKey,
+                            onValueChange = { key ->
+                                onUpdateSettings { it.copy(customGeminiApiKey = key.trim()) }
+                            },
+                            label = { Text("Optional Gemini API Key") },
+                            placeholder = { Text("AIza... (leave blank for Firebase AI)") },
+                            singleLine = true,
+                            visualTransformation = if (showApiKey) {
+                                VisualTransformation.None
+                            } else {
+                                PasswordVisualTransformation()
+                            },
+                            trailingIcon = {
+                                IconButton(onClick = { showApiKey = !showApiKey }) {
+                                    Icon(
+                                        imageVector = if (showApiKey) {
+                                            Icons.Default.VisibilityOff
+                                        } else {
+                                            Icons.Default.Visibility
+                                        },
+                                        contentDescription = if (showApiKey) "Hide API Key" else "Show API Key"
+                                    )
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = ObsidianBg,
+                                unfocusedContainerColor = ObsidianBg,
+                                focusedBorderColor = CyanElectric,
+                                unfocusedBorderColor = ObsidianBorder,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("settings_custom_api_key_input")
+                        )
+
+                        if (hasCustomKey) {
+                            OutlinedTextField(
+                                value = settings.customGeminiModel,
+                                onValueChange = { model ->
+                                    onUpdateSettings { it.copy(customGeminiModel = model.trim()) }
+                                },
+                                label = { Text("Direct API Model ID") },
+                                placeholder = { Text("gemini-2.5-flash") },
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedContainerColor = ObsidianBg,
+                                    unfocusedContainerColor = ObsidianBg,
+                                    focusedBorderColor = CyanElectric,
+                                    unfocusedBorderColor = ObsidianBorder,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("settings_custom_model_input")
+                            )
+
+                            TextButton(
+                                onClick = {
+                                    onUpdateSettings { it.copy(customGeminiApiKey = "") }
+                                }
+                            ) {
+                                Text("Clear Key & Use Built-in Firebase AI", color = CyanSoft)
                             }
                         }
                     }

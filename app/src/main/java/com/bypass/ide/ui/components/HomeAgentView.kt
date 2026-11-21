@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -95,6 +96,7 @@ fun HomeAgentView(
     onApplyCodeBlock: (code: String, lang: String) -> Unit,
     onRunCommandInTerminal: (String) -> Unit,
     onNavigateToTab: (IdeTab) -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val activeMessages = state.activeSession?.messages.orEmpty()
@@ -229,7 +231,8 @@ fun HomeAgentView(
                             onOpenFile = onOpenFileInEditor,
                             onOpenPreview = { onNavigateToTab(IdeTab.PREVIEW) },
                             onApplyCode = onApplyCodeBlock,
-                            onRunCommand = onRunCommandInTerminal
+                            onRunCommand = onRunCommandInTerminal,
+                            onOpenSettings = onOpenSettings
                         )
                     }
 
@@ -438,7 +441,8 @@ private fun ChatMessageCard(
     onOpenFile: (String) -> Unit,
     onOpenPreview: () -> Unit,
     onApplyCode: (String, String) -> Unit,
-    onRunCommand: (String) -> Unit
+    onRunCommand: (String) -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     if (message.isUser) {
         Row(
@@ -505,6 +509,20 @@ private fun ChatMessageCard(
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextPrimary
                     )
+                    OutlinedButton(
+                        onClick = onOpenSettings,
+                        border = BorderStroke(1.dp, CyanElectric.copy(alpha = 0.55f)),
+                        modifier = Modifier.testTag("error_open_settings_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = null,
+                            tint = CyanElectric,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.size(6.dp))
+                        Text("Open IDE Settings", color = CyanSoft)
+                    }
                 } else {
                     StructuredChatMessage(
                         markdown = message.text,

@@ -36,6 +36,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -256,6 +262,19 @@ fun AgentPromptBar(
                     shape = RoundedCornerShape(14.dp),
                     modifier = Modifier
                         .weight(1f)
+                        .onPreviewKeyEvent { event ->
+                            if (event.type == KeyEventType.KeyDown &&
+                                event.key == Key.Enter &&
+                                !event.isShiftPressed
+                            ) {
+                                if (!isGenerating && prompt.isNotBlank()) {
+                                    onSend()
+                                }
+                                true
+                            } else {
+                                false
+                            }
+                        }
                         .testTag("agent_prompt_input")
                 )
 

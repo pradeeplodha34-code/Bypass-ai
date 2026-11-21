@@ -144,12 +144,14 @@ data class NetworkShieldStatus(
 @Serializable
 data class IdeSettings(
     val activeProject: String = "StarterWebApp",
-    val webSearchEnabled: Boolean = true,
+    val webSearchEnabled: Boolean = false,
     val reasoningTier: ReasoningTier = ReasoningTier.BALANCED,
     val editorFontSizeSp: Int = 13,
     val showLineNumbers: Boolean = true,
     val wordWrap: Boolean = false,
-    val mariaAutoSpeak: Boolean = true
+    val mariaAutoSpeak: Boolean = true,
+    val customGeminiApiKey: String = "",
+    val customGeminiModel: String = "gemini-2.5-flash"
 )
 
 data class StarterPromptItem(

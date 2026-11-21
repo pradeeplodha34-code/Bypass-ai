@@ -317,7 +317,9 @@ class IdeViewModel(application: Application) : AndroidViewModel(application) {
                     mode = mode,
                     tier = stateSnapshot.settings.reasoningTier,
                     projectName = activeProject,
-                    webSources = sources
+                    webSources = sources,
+                    customGeminiApiKey = stateSnapshot.settings.customGeminiApiKey,
+                    customGeminiModel = stateSnapshot.settings.customGeminiModel
                 ).collect { event ->
                     when (event) {
                         is StreamChunkEvent.Token -> {
@@ -640,10 +642,13 @@ class IdeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _uiState.update { it.copy(isApplyingAiEdit = true) }
             try {
+                val currentSettings = _uiState.value.settings
                 val updatedCode = geminiEngine.generateInlineCodeEdit(
                     fileName = tab.fileName,
                     currentContent = tab.content,
-                    instruction = instruction
+                    instruction = instruction,
+                    customGeminiApiKey = currentSettings.customGeminiApiKey,
+                    customGeminiModel = currentSettings.customGeminiModel
                 )
                 updateActiveEditorContent(updatedCode)
                 saveActiveEditorFile()
@@ -835,7 +840,13 @@ class IdeViewModel(application: Application) : AndroidViewModel(application) {
                 )
             }
             try {
-                val reply = geminiEngine.askMariaVoice(clean, activeProject)
+                val currentSettings = _uiState.value.settings
+                val reply = geminiEngine.askMariaVoice(
+                    spokenQuery = clean,
+                    projectName = activeProject,
+                    customGeminiApiKey = currentSettings.customGeminiApiKey,
+                    customGeminiModel = currentSettings.customGeminiModel
+                )
                 _uiState.update {
                     it.copy(
                         mariaLoading = false,

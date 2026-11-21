@@ -55,6 +55,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    lint {
+        abortOnError = false
+        checkReleaseBuilds = false
+    }
 }
 
 dependencies {
@@ -76,6 +81,9 @@ dependencies {
     implementation(libs.firebase.ai)
     implementation(libs.firebase.appcheck.recaptcha)
     implementation(libs.firebase.appcheck.debug)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.org.json)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

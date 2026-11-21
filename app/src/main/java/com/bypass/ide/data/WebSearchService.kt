@@ -3,7 +3,10 @@ package com.bypass.ide.data
 import android.util.Log
 import com.bypass.ide.model.ExaminedSource
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -15,8 +18,8 @@ private const val USER_AGENT = "BypassIDE/1.0 (Android Mobile IDE; Knowledge Gro
 
 class WebSearchService(
     private val client: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(12, TimeUnit.SECONDS)
+        .connectTimeout(4, TimeUnit.SECONDS)
+        .readTimeout(5, TimeUnit.SECONDS)
         .build()
 ) {
 
@@ -24,10 +27,24 @@ class WebSearchService(
         val cleanQuery = query.replace("@web", "", ignoreCase = true).trim()
         if (cleanQuery.isBlank()) return@withContext emptyList()
 
-        val results = mutableListOf<ExaminedSource>()
         val encoded = URLEncoder.encode(cleanQuery, "UTF-8")
 
-        // 1. DuckDuckGo Instant Answer JSON API
+        val collected = withTimeoutOrNull(4_500L) {
+            coroutineScope {
+                val ddgDeferred = async { fetchDuckDuckGoInstant(cleanQuery, encoded) }
+                val wikiDeferred = async { fetchWikipedia(encoded) }
+                val merged = (ddgDeferred.await() + wikiDeferred.await()).toMutableList()
+                if (merged.size < 2) {
+                    merged.addAll(fetchDuckDuckGoLite(cleanQuery, encoded))
+                }
+                merged.distinctBy { it.url }.take(6)
+            }
+        }
+        collected ?: emptyList()
+    }
+
+    private fun fetchDuckDuckGoInstant(cleanQuery: String, encoded: String): List<ExaminedSource> {
+        val results = mutableListOf<ExaminedSource>()
         runCatching {
             val req = Request.Builder()
                 .url("https://api.duckduckgo.com/?q=$encoded&format=json&no_html=1&skip_disambig=1")
@@ -73,8 +90,11 @@ class WebSearchService(
                 }
             }
         }.onFailure { Log.w(TAG, "DuckDuckGo API search error: ${it.message}") }
+        return results
+    }
 
-        // 2. Wikipedia Search API
+    private fun fetchWikipedia(encoded: String): List<ExaminedSource> {
+        val results = mutableListOf<ExaminedSource>()
         runCatching {
             val req = Request.Builder()
                 .url("https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=$encoded&format=json&utf8=1&srlimit=3")
@@ -109,41 +129,41 @@ class WebSearchService(
                 }
             }
         }.onFailure { Log.w(TAG, "Wikipedia search error: ${it.message}") }
+        return results
+    }
 
-        // 3. DuckDuckGo Lite HTML fallback if still sparse
-        if (results.size < 3) {
-            runCatching {
-                val req = Request.Builder()
-                    .url("https://lite.duckduckgo.com/lite/?q=$encoded")
-                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36")
-                    .build()
-                client.newCall(req).execute().use { resp ->
-                    if (resp.isSuccessful) {
-                        val html = resp.body?.string().orEmpty()
-                        val linkRegex = Regex(
-                            """<a[^>]+href=['"](https?://[^'"]+)['"][^>]*class=['"]result-link['"][^>]*>([\s\S]*?)</a>""",
-                            RegexOption.IGNORE_CASE
-                        )
-                        linkRegex.findAll(html).take(4).forEach { match ->
-                            val url = match.groupValues[1]
-                            val title = match.groupValues[2].replace(Regex("<[^>]+>"), "").trim()
-                            if (url.isNotBlank() && title.isNotBlank()) {
-                                results.add(
-                                    ExaminedSource(
-                                        title = title.take(90),
-                                        url = url,
-                                        domain = extractDomain(url),
-                                        snippet = "Live web search result for $cleanQuery"
-                                    )
+    private fun fetchDuckDuckGoLite(cleanQuery: String, encoded: String): List<ExaminedSource> {
+        val results = mutableListOf<ExaminedSource>()
+        runCatching {
+            val req = Request.Builder()
+                .url("https://lite.duckduckgo.com/lite/?q=$encoded")
+                .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36")
+                .build()
+            client.newCall(req).execute().use { resp ->
+                if (resp.isSuccessful) {
+                    val html = resp.body?.string().orEmpty()
+                    val linkRegex = Regex(
+                        """<a[^>]+href=['"](https?://[^'"]+)['"][^>]*class=['"]result-link['"][^>]*>([\s\S]*?)</a>""",
+                        RegexOption.IGNORE_CASE
+                    )
+                    linkRegex.findAll(html).take(4).forEach { match ->
+                        val url = match.groupValues[1]
+                        val title = match.groupValues[2].replace(Regex("<[^>]+>"), "").trim()
+                        if (url.isNotBlank() && title.isNotBlank()) {
+                            results.add(
+                                ExaminedSource(
+                                    title = title.take(90),
+                                    url = url,
+                                    domain = extractDomain(url),
+                                    snippet = "Live web search result for $cleanQuery"
                                 )
-                            }
+                            )
                         }
                     }
                 }
-            }.onFailure { Log.w(TAG, "DuckDuckGo Lite search error: ${it.message}") }
-        }
-
-        results.distinctBy { it.url }.take(6)
+            }
+        }.onFailure { Log.w(TAG, "DuckDuckGo Lite search error: ${it.message}") }
+        return results
     }
 
     suspend fun fetchPageExcerpt(url: String): String = withContext(Dispatchers.IO) {
