@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bypass IDE</string>
+    <string name="ide_subtitle">Autonomous Mobile IDE</string>
+    <string name="nav_home">Agent</string>
+    <string name="nav_files">Files</string>
+    <string name="nav_editor">Editor</string>
+    <string name="nav_preview">Preview</string>
+    <string name="nav_terminal">Terminal</string>
+    <string name="action_settings">IDE Settings</string>
+    <string name="action_maria_voice">Maria Voice Assistant</string>
+    <string name="action_developer_profile">Developer Profile</string>
+    <string name="empty_chat_title">Ask Bypass AI to build your app</string>
+    <string name="empty_chat_subtitle">Switch between Chat for architecture help and Agent to autonomously create files, run commands, and launch Live Preview.</string>
+    <string name="no_file_open">No File Open</string>
+    <string name="no_file_open_hint">Open a file from the Files tab or ask Bypass AI in Agent mode to generate a project.</string>
+    <string name="no_html_found">No index.html Found</string>
+    <string name="terminal_placeholder">Enter shell command (e.g., ls -la, pwd, cat index.html)...</string>
+    <string name="voice_permission_required">Microphone permission is required for Maria Voice Assistant.</string>
+</resources>
