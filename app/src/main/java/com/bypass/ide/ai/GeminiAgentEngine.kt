@@ -9,6 +9,7 @@ import com.bypass.ide.model.ChatMessage
 import com.bypass.ide.model.ExaminedSource
 import com.bypass.ide.model.ReasoningTier
 import com.google.firebase.Firebase
+import com.google.firebase.FirebaseApp
 import com.google.firebase.ai.ai
 import com.google.firebase.ai.type.content
 import com.google.firebase.ai.type.generationConfig
@@ -114,6 +115,11 @@ class GeminiAgentEngine(
                         }
                     )
                 } else {
+                    if (isCiFallbackFirebaseConfig()) {
+                        throw IllegalStateException(
+                            "This GitHub Actions APK was built without Firebase google-services.json. Tap 'Open IDE Settings' below to paste your Gemini API key, or add GOOGLE_SERVICES_JSON to GitHub Repository Secrets."
+                        )
+                    }
                     val firebaseHistory = sanitizedTurns.map { (role, text) ->
                         content(role = role) { text(text) }
                     }
@@ -178,6 +184,12 @@ class GeminiAgentEngine(
             throw e
         }
     }.flowOn(Dispatchers.IO)
+
+    private fun isCiFallbackFirebaseConfig(): Boolean {
+        return runCatching {
+            FirebaseApp.getInstance().options.apiKey == "CI_FALLBACK_KEY_SET_IN_APP_SETTINGS"
+        }.getOrDefault(false)
+    }
 
     private suspend fun streamViaCustomRestKey(
         apiKey: String,
@@ -266,6 +278,11 @@ class GeminiAgentEngine(
                         prompt = prompt
                     )
                 } else {
+                    if (isCiFallbackFirebaseConfig()) {
+                        throw IllegalStateException(
+                            "This GitHub Actions APK was built without Firebase google-services.json. Add your Gemini API key in IDE Settings."
+                        )
+                    }
                     defaultFlashModel.generateContent(prompt).text?.trim().orEmpty()
                 }
             }
@@ -308,7 +325,11 @@ class GeminiAgentEngine(
                         prompt = prompt
                     )
                 } else {
-                    liteFlashModel.generateContent(prompt).text?.trim().orEmpty()
+                    if (isCiFallbackFirebaseConfig()) {
+                        "Please open IDE Settings and enter your Gemini API key to enable Maria Voice in this CI build."
+                    } else {
+                        liteFlashModel.generateContent(prompt).text?.trim().orEmpty()
+                    }
                 }
             }
             reply.takeIf { it.isNotBlank() }
